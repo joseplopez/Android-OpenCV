@@ -89,19 +89,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
         }
@@ -130,9 +124,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     List<MatOfPoint> squares = new ArrayList<MatOfPoint>();
-
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        //return inputFrame.rgba();
         if (Math.random()>0.80) {
             findSquares(inputFrame.rgba().clone(),squares);
         }
@@ -146,7 +138,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Imgproc.drawContours(image, squares, -1, new Scalar(0,0,255));
         return image;
     }
-
     // helper function:
     // finds a cosine of angle between vectors
     // from pt0->pt1 and from pt0->pt2
@@ -157,75 +148,53 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         double dy2 = pt2.y - pt0.y;
         return (dx1*dx2 + dy1*dy2)/Math.sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
     }
-
     // returns sequence of squares detected on the image.
     // the sequence is stored in the specified memory storage
     void findSquares( Mat image, List<MatOfPoint> squares )
     {
-
         squares.clear();
-
         Mat smallerImg=new Mat(new Size(image.width()/2, image.height()/2),image.type());
-
         Mat gray=new Mat(image.size(),image.type());
-
         Mat gray0=new Mat(image.size(), CvType.CV_8U);
-
         // down-scale and upscale the image to filter out the noise
         Imgproc.pyrDown(image, smallerImg, smallerImg.size());
         Imgproc.pyrUp(smallerImg, image, image.size());
-
         // find squares in every color plane of the image
         for( int c = 0; c < 3; c++ )
         {
-
             extractChannel(image, gray, c);
-
             // try several threshold levels
             for( int l = 1; l < N; l++ )
             {
                 //Cany removed... Didn't work so well
-
-
                 Imgproc.threshold(gray, gray0, (l+1)*255/N, 255, Imgproc.THRESH_BINARY);
-
-
                 List<MatOfPoint> contours=new ArrayList<MatOfPoint>();
-
                 // find contours and store them all as a list
                 Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-
                 MatOfPoint approx=new MatOfPoint();
-
                 // test each contour
                 for( int i = 0; i < contours.size(); i++ )
                 {
-
                     // approximate contour with accuracy proportional
                     // to the contour perimeter
                     approx = approxPolyDP(contours.get(i),  Imgproc.arcLength(new MatOfPoint2f(contours.get(i).toArray()), true)*0.02, true);
-
-
                     // square contours should have 4 vertices after approximation
                     // relatively large area (to filter out noisy contours)
                     // and be convex.
                     // Note: absolute value of an area is used because
                     // area may be positive or negative - in accordance with the
                     // contour orientation
-
                     if( approx.toArray().length == 4 &&
                             Math.abs(Imgproc.contourArea(approx)) > 1000 &&
                             Imgproc.isContourConvex(approx) )
                     {
                         double maxCosine = 0;
-
                         for( int j = 2; j < 5; j++ )
                         {
                             // find the maximum cosine of the angle between joint edges
                             double cosine = Math.abs(angle(approx.toArray()[j%4], approx.toArray()[j-2], approx.toArray()[j-1]));
                             maxCosine = Math.max(maxCosine, cosine);
                         }
-
                         // if cosines of all angles are small
                         // (all angles are ~90 degree) then write quandrange
                         // vertices to resultant sequence
@@ -240,21 +209,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     void extractChannel(Mat source, Mat out, int channelNum) {
         List<Mat> sourceChannels=new ArrayList<Mat>();
         List<Mat> outChannel=new ArrayList<Mat>();
-
         Core.split(source, sourceChannels);
-
         outChannel.add(new Mat(sourceChannels.get(0).size(),sourceChannels.get(0).type()));
-
         Core.mixChannels(sourceChannels, outChannel, new MatOfInt(channelNum,0));
-
         Core.merge(outChannel, out);
     }
 
     MatOfPoint approxPolyDP(MatOfPoint curve, double epsilon, boolean closed) {
         MatOfPoint2f tempMat=new MatOfPoint2f();
-
         Imgproc.approxPolyDP(new MatOfPoint2f(curve.toArray()), tempMat, epsilon, closed);
-
         return new MatOfPoint(tempMat.toArray());
     }
 }
